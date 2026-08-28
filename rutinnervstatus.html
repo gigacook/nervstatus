@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rutinnervstatus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0F1C;
+    --panel:#121A2C;
+    --panel-2:#161F35;
+    --line:#25314C;
+    --text:#E9EEF7;
+    --dim:#8E9AB8;
+    --dim-2:#5C6784;
+
+    --samtal:#9A9CFB;
+    --stående:#4FE0C4;
+    --sittande:#F0C15C;
+    --liggande:#F1809E;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif; -webkit-font-smoothing:antialiased;}
+  body{padding-bottom:56px;}
+
+  .mono{font-family:'IBM Plex Mono', monospace; letter-spacing:.04em;}
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(10,15,28,.92); backdrop-filter:blur(10px);
+    padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  .htop{display:flex; justify-content:space-between; align-items:baseline;}
+  h1{font-size:17px; margin:0; font-weight:600; letter-spacing:.02em;}
+  .htop .count{font-size:12px; color:var(--dim); font-weight:500;}
+  .htop .count b{color:var(--text);}
+  .track{margin-top:10px; height:5px; border-radius:4px; background:var(--line); overflow:hidden;}
+  .fill{height:100%; width:0%; border-radius:4px;
+    background:linear-gradient(90deg,var(--samtal),var(--stående),var(--sittande),var(--liggande));
+    transition:width .35s ease;}
+
+  nav{display:flex; gap:8px; margin-top:12px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none;}
+  nav::-webkit-scrollbar{display:none;}
+  nav button{
+    flex:0 0 auto; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--dim); background:var(--panel);
+    border:1px solid var(--line); border-radius:99px; padding:7px 13px;
+  }
+  nav button.active{color:var(--bg); font-weight:600; border-color:transparent;}
+  nav button[data-p="samtal"].active{background:var(--samtal);}
+  nav button[data-p="stående"].active{background:var(--stående);}
+  nav button[data-p="sittande"].active{background:var(--sittande);}
+  nav button[data-p="liggande"].active{background:var(--liggande);}
+
+  /* ---------- layout / nerve trunk ---------- */
+  main{padding:22px 18px 10px 30px; position:relative;}
+  main::before{
+    content:""; position:absolute; left:14px; top:6px; bottom:20px; width:2px;
+    background:var(--line); border-radius:2px;
+  }
+
+  section{position:relative; margin-bottom:34px; scroll-margin-top:150px;}
+  .node{
+    position:absolute; left:-24px; top:2px; width:12px; height:12px; border-radius:50%;
+    background:var(--bg); border:2px solid var(--line); transition:all .3s ease;
+  }
+  section[data-p="samtal"] .node{border-color:var(--samtal);}
+  section[data-p="stående"] .node{border-color:var(--stående);}
+  section[data-p="sittande"] .node{border-color:var(--sittande);}
+  section[data-p="liggande"] .node{border-color:var(--liggande);}
+  section.done[data-p="samtal"] .node{background:var(--samtal); box-shadow:0 0 10px var(--samtal);}
+  section.done[data-p="stående"] .node{background:var(--stående); box-shadow:0 0 10px var(--stående);}
+  section.done[data-p="sittande"] .node{background:var(--sittande); box-shadow:0 0 10px var(--sittande);}
+  section.done[data-p="liggande"] .node{background:var(--liggande); box-shadow:0 0 10px var(--liggande);}
+
+  .eyebrow{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .eyebrow .ico{font-size:15px;}
+  .eyebrow .lbl{font-size:12px; text-transform:uppercase; font-weight:600;}
+  section[data-p="samtal"] .lbl{color:var(--samtal);}
+  section[data-p="stående"] .lbl{color:var(--stående);}
+  section[data-p="sittande"] .lbl{color:var(--sittande);}
+  section[data-p="liggande"] .lbl{color:var(--liggande);}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:6px 4px; margin-bottom:10px;}
+  .sub{font-size:11px; color:var(--dim-2); text-transform:uppercase; font-weight:600; letter-spacing:.06em;
+    padding:10px 14px 4px;}
+
+  .item{display:flex; align-items:flex-start; gap:12px; padding:10px 14px; cursor:pointer;}
+  .item input{display:none;}
+  .box{
+    flex:0 0 20px; width:20px; height:20px; margin-top:1px; border-radius:7px;
+    border:1.5px solid var(--dim-2); display:flex; align-items:center; justify-content:center;
+    transition:all .18s ease;
+  }
+  .box svg{width:12px; height:12px; opacity:0; transform:scale(.5); transition:all .18s ease;}
+  .txt{font-size:15px; line-height:1.4; color:var(--text); transition:all .18s ease;}
+
+  section[data-p="samtal"] .item input:checked ~ .box{background:var(--samtal); border-color:var(--samtal);}
+  section[data-p="stående"] .item input:checked ~ .box{background:var(--stående); border-color:var(--stående);}
+  section[data-p="sittande"] .item input:checked ~ .box{background:var(--sittande); border-color:var(--sittande);}
+  section[data-p="liggande"] .item input:checked ~ .box{background:var(--liggande); border-color:var(--liggande);}
+  .item input:checked ~ .box svg{opacity:1; transform:scale(1);}
+  .item input:checked ~ .txt{color:var(--dim-2); text-decoration:line-through; text-decoration-color:var(--dim-2);}
+
+  footer{padding:8px 18px calc(env(safe-area-inset-bottom) + 18px); text-align:center;}
+  #reset{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.05em;
+    color:var(--dim); background:none; border:1px solid var(--line); border-radius:99px;
+    padding:9px 18px;
+  }
+  .note{margin-top:14px; font-size:11px; color:var(--dim-2); line-height:1.5;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="htop">
+    <h1>🧠 Rutinnervstatus</h1>
+    <span class="count mono"><b id="cn">0</b>/<span id="ct">0</span></span>
+  </div>
+  <div class="track"><div class="fill" id="fill"></div></div>
+  <nav id="nav">
+    <button data-p="samtal" class="active">🗣️ Samtal</button>
+    <button data-p="stående">🚶 Stående</button>
+    <button data-p="sittande">🪑 Sittande</button>
+    <button data-p="liggande">🛏️ Liggande</button>
+  </nav>
+</header>
+
+<main>
+
+  <section id="s-samtal" data-p="samtal">
+    <div class="node"></div>
+    <div class="eyebrow"><span class="ico">🗣️</span><span class="lbl">Under samtalet</span></div>
+    <div class="card">
+      <div class="sub">Högre cerebrala funktioner</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Tal (dysartri / afasi)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Screening: orientering, minne, spatial funktion, uppmärksamhet</span></label>
+      <div class="sub">Observera under tiden</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Ofrivilliga rörelser</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Ansiktsmotorik (asymmetri)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Avklädning (motorik, klumpighet)</span></label>
+    </div>
+  </section>
+
+  <section id="s-stående" data-p="stående">
+    <div class="node"></div>
+    <div class="eyebrow"><span class="ico">🚶</span><span class="lbl">Stående</span></div>
+    <div class="card">
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Gångmönster</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Tå- och hälgång</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Nigsittning och uppresning</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Rombergs prov</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Finger-näsförsök</span></label>
+    </div>
+  </section>
+
+  <section id="s-sittande" data-p="sittande">
+    <div class="node"></div>
+    <div class="eyebrow"><span class="ico">🪑</span><span class="lbl">Sittande</span></div>
+    <div class="card">
+      <div class="sub">Kranialnerver</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Synfält (II)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Ögonrörelser (III, IV, VI) – nystagmus? sackader? ev. HIT</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Ptos</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Pupillstorlek & ljusreaktion (II, III)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Ansiktsmotorik (VII)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Hörsel (VIII)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Svalgmotorik (IX, X, XII)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Tungmotorik (XII)</span></label>
+      <div class="sub">Motorik & koordination</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Diadokokinesi</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Fingerspel</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Armar framåt sträck ("Grassets test")</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Muskelkraft armar – proximalt & distalt (fingerspretning, axelabduktion)</span></label>
+      <div class="sub">Reflexer</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Reflexer armar (utlösbara? sidoskillnad? stegrade?)</span></label>
+    </div>
+  </section>
+
+  <section id="s-liggande" data-p="liggande">
+    <div class="node"></div>
+    <div class="eyebrow"><span class="ico">🛏️</span><span class="lbl">Liggande</span></div>
+    <div class="card">
+      <div class="sub">Sensibilitet</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Screening smärta (ansikte, distalt arm & ben)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Vibration (distalt arm & ben)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Neglekt</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Gränser / sida / nivå?</span></label>
+      <div class="sub">Motorik</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Omvänd "Barré"</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Tonus armar & ben (hand, armbåge, knä)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Häl-knäförsök</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Benkraft – proximalt & distalt (nigsittning, tå/hälgång)</span></label>
+      <div class="sub">Reflexer & patologiska tecken</div>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Reflexer ben (utlösbara? sidoskillnad? stegrade?)</span></label>
+      <label class="item"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#0A0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="txt">Babinskis tecken (finns / ses ej)</span></label>
+    </div>
+    <div class="note">Baserad på VGR:s rutinnervstatus, omstrukturerad efter undersökningens praktiska flöde.</div>
+  </section>
+
+</main>
+
+<footer><button id="reset" class="mono">Nollställ ↺</button></footer>
+
+<script>
+  const boxes = Array.from(document.querySelectorAll('.item input'));
+  const sections = Array.from(document.querySelectorAll('section'));
+  const cn = document.getElementById('cn');
+  const ct = document.getElementById('ct');
+  const fill = document.getElementById('fill');
+  ct.textContent = boxes.length;
+
+  function update(){
+    const checked = boxes.filter(b=>b.checked).length;
+    cn.textContent = checked;
+    fill.style.width = (checked/boxes.length*100) + '%';
+    sections.forEach(sec=>{
+      const bs = Array.from(sec.querySelectorAll('.item input'));
+      sec.classList.toggle('done', bs.length>0 && bs.every(b=>b.checked));
+    });
+  }
+  boxes.forEach(b=>b.addEventListener('change', update));
+
+  document.getElementById('reset').addEventListener('click', ()=>{
+    boxes.forEach(b=>b.checked=false);
+    update();
+  });
+
+  // nav scroll + scrollspy
+  const navBtns = Array.from(document.querySelectorAll('nav button'));
+  navBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('s-'+btn.dataset.p).scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        const p = e.target.dataset.p;
+        navBtns.forEach(b=>b.classList.toggle('active', b.dataset.p===p));
+      }
+    });
+  }, {rootMargin:'-140px 0px -70% 0px'});
+  sections.forEach(s=>io.observe(s));
+
+  update();
+</script>
+</body>
+</html>
